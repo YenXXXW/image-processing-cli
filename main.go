@@ -18,9 +18,22 @@ func main() {
 		log.Panic("Error taking convertion type", err)
 	}
 
-	inputPath, err := input.PromptUserInput(result)
-	if err != nil {
-		log.Panic("Error taking user input", err)
+	var inputPath string
+	var height uint
+	var width uint
+
+	if result == "Scale" {
+		inputPath, width, height, err = input.PromptUserInputScaling()
+		if err != nil {
+			log.Panic("Error taking user input for scaling", err)
+
+		}
+	} else {
+
+		inputPath, err = input.PromptUserInputConvertion(result)
+		if err != nil {
+			log.Panic("Error taking user input", err)
+		}
 	}
 
 	toConverts, err := converter.ExtractFiles(inputPath, result)
@@ -33,20 +46,22 @@ func main() {
 		log.Panic("Error taking output path", err)
 	}
 
-	if result == "JPG to PNG" {
-		for _, path := range toConverts {
-			err := converter.ConvertToPNG(path, outPath)
-			if err != nil {
-				fmt.Println(err)
-			}
+	if result == "Scale" {
+		err := converter.ScaleImage(inputPath, outPath, width, height)
+		if err != nil {
+			log.Printf("Error scaling image %v", err)
 		}
-	} else if result == "PNG to JPG" {
 
-		for _, path := range toConverts {
-			err := converter.ConvertToJPG(path, outPath)
-			if err != nil {
-				fmt.Println(err)
-			}
+		fmt.Println("successfully scaled the image")
+
+	} else {
+
+		wp := converter.WorkerPool{
+			Images:      toConverts,
+			Concurrency: 5,
 		}
+
+		wp.Run(outPath, result)
 	}
+
 }

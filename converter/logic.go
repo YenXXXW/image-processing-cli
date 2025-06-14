@@ -28,7 +28,7 @@ func ExtractFiles(input, mode string) ([]string, error) {
 				toConverts = append(toConverts, path)
 			}
 		case "PNG to JPG":
-			if ext == ".png" {
+			if ext == ".png" || ext == ".PNG" {
 				toConverts = append(toConverts, path)
 			}
 		case "Scale":
