@@ -92,10 +92,7 @@ func ScaleImage(path, outPath string, width, height uint) error {
 		return err
 	}
 
-	if err != nil {
-		return err
-	}
-	file.Close()
+	defer file.Close()
 
 	base := filepath.Base(path)
 	ext := filepath.Ext(base)
@@ -103,7 +100,7 @@ func ScaleImage(path, outPath string, width, height uint) error {
 
 	var buff bytes.Buffer
 
-	if ext == "jpeg" || ext == "jpg" {
+	if ext == ".jpeg" || ext == ".jpg" {
 
 		img, err := jpeg.Decode(file)
 
@@ -115,7 +112,7 @@ func ScaleImage(path, outPath string, width, height uint) error {
 		}
 	}
 
-	if ext == "PNG" || ext == "png" {
+	if ext == ".PNG" || ext == ".png" {
 		img, err := png.Decode(file)
 
 		scaledImage := resize.Resize(width, height, img, resize.Lanczos3)
@@ -126,7 +123,7 @@ func ScaleImage(path, outPath string, width, height uint) error {
 		}
 	}
 
-	outFile, err := os.Create(fmt.Sprintf("%s/%sScaled.%s", outPath, fileName, ext))
+	outFile, err := os.Create(fmt.Sprintf("%s/%sScaled%s", outPath, fileName, ext))
 	if err != nil {
 		return err
 	}
@@ -137,6 +134,7 @@ func ScaleImage(path, outPath string, width, height uint) error {
 		return err
 	}
 
+	fmt.Printf("successfully scaled the image %s\n", path)
 	return nil
 
 }

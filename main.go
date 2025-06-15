@@ -22,6 +22,8 @@ func main() {
 	var height uint
 	var width uint
 
+	var toConverts []string
+
 	if result == "Scale" {
 		inputPath, width, height, err = input.PromptUserInputScaling()
 		if err != nil {
@@ -30,15 +32,10 @@ func main() {
 		}
 	} else {
 
-		inputPath, err = input.PromptUserInputConvertion(result)
+		toConverts, err = input.PromptUserInputConvertion(result)
 		if err != nil {
 			log.Panic("Error taking user input", err)
 		}
-	}
-
-	toConverts, err := converter.ExtractFiles(inputPath, result)
-	if err != nil {
-		log.Panic("Validation error:", err)
 	}
 
 	outPath, err := input.PromptOutputPath()
@@ -51,8 +48,6 @@ func main() {
 		if err != nil {
 			log.Printf("Error scaling image %v", err)
 		}
-
-		fmt.Println("successfully scaled the image")
 
 	} else {
 

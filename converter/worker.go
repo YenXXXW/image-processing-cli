@@ -27,7 +27,7 @@ func (wp *WorkerPool) Worker(outputPath, convertionType string) {
 				log.Printf("error converting %s to jpg %v", img, err)
 			}
 		}
-		fmt.Printf("convertion of '%s completed", img)
+		fmt.Printf("convertion of '%s completed\n", img)
 		wp.wg.Done()
 
 	}

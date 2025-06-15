@@ -4,9 +4,12 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path"
+	"slices"
 	"strconv"
 	"strings"
 
+	"github.com/google/shlex"
 	"github.com/manifoldco/promptui"
 )
 
@@ -27,23 +30,60 @@ func PromptType() (string, error) {
 	return result, nil
 }
 
-func PromptUserInputConvertion(convertionType string) (string, error) {
+func PromptUserInputConvertion(convertionType string) ([]string, error) {
 	var label string
 	switch convertionType {
 	case "JPG to PNG":
-		label = "Enter image file path(s) to convert to PNG (space-separated):"
+		label = "Enter file paths (one per line). Press Enter on an empty line to finish:"
 	case "PNG to JPG":
-		label = "Enter image file path(s) to convert to JPG (space-separated):"
+		label = "Enter file paths (one per line). Press Enter on an empty line to finish:"
 	}
 
 	fmt.Println(label)
-	reader := bufio.NewReader(os.Stdin)
-	input, err := reader.ReadString('\n')
-	if err != nil {
-		return "", err
+	scanner := bufio.NewScanner(os.Stdin)
+	var paths []string
+
+	for {
+		fmt.Printf("file path: ")
+		scanner.Scan()
+
+		raw := strings.TrimSpace(scanner.Text())
+
+		if raw == "" {
+			break
+		}
+		espcatedPaths, err := shlex.Split(raw)
+		if err != nil {
+			fmt.Printf("Error escaping the shell path %v", err)
+			return []string{}, nil
+		}
+		filepath := espcatedPaths[0]
+
+		if _, err := os.Stat(filepath); os.IsNotExist(err) {
+			fmt.Println("❌ File does not exist. Try again.")
+			continue
+		}
+
+		base := path.Base(filepath)
+		ext := path.Ext(base)
+
+		if convertionType == "JPG to PNG" {
+			if !slices.Contains([]string{".jpg", ".jpeg"}, ext) {
+				fmt.Println("provided file is not a jpg file")
+				continue
+			}
+		} else {
+
+			if !slices.Contains([]string{".png", ".PNG"}, ext) {
+				fmt.Println("provided file is not a jpg file")
+				continue
+			}
+		}
+
+		paths = append(paths, filepath)
 	}
 
-	return strings.TrimSpace(input), nil
+	return paths, nil
 }
 
 func PromptUserInputScaling() (string, uint, uint, error) {
@@ -55,46 +95,76 @@ func PromptUserInputScaling() (string, uint, uint, error) {
 		return "", 0, 0, err
 	}
 
+	var uint64Width uint64
+	var uint64Height uint64
+
+	var min uint64
+	var max uint64
+	min = 1
+	max = 10000
+
 	fmt.Printf("Enter the width of the image to scale: ")
-	width, err := reader.ReadString('\n')
-	if err != nil {
-		return "", 0, 0, err
-	}
-
-	fmt.Printf("Enter the height of the image to scale: ")
-	height, err := reader.ReadString('\n')
-	if err != nil {
-		return "", 0, 0, err
-	}
-
-	uint64Width, err := strconv.ParseUint(strings.TrimSpace(width), 10, 64)
-	if err != nil {
-		return "", 0, 0, err
-	}
-
-	uint64Height, err := strconv.ParseUint(strings.TrimSpace(height), 10, 64)
-	if err != nil {
-		return "", 0, 0, err
-	}
+	uint64Width = promptUintInRange("Enter the width of the image", min, max)
+	uint64Height = promptUintInRange("Enter the height of the image", min, max)
 
 	return strings.TrimSpace(input), uint(uint64Width), uint(uint64Height), nil
 }
 
 func PromptOutputPath() (string, error) {
-	fmt.Println("Enter the location to store the generated files:")
 	reader := bufio.NewReader(os.Stdin)
-	outputPath, err := reader.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
+	var outputPath string
+	for {
 
-	outputPath = strings.TrimSpace(outputPath)
-	_, err = os.Stat(outputPath)
-	if os.IsNotExist(err) {
-		return "", fmt.Errorf("directory does not exist: %s", outputPath)
-	} else if err != nil {
-		return "", err
+		fmt.Print("Enter the location to store the generated files: ")
+		rawString, err := reader.ReadString('\n')
+		if err != nil {
+			return "", fmt.Errorf("error reading the output path: %v", err)
+		}
+
+		rawString = strings.TrimSpace(rawString)
+
+		espcatedPaths, err := shlex.Split(rawString)
+		if err != nil {
+			fmt.Printf("Error escaping the shell path %v\n", err)
+			return "", nil
+		}
+		outputPath = espcatedPaths[0]
+		info, err := os.Stat(outputPath)
+		if os.IsNotExist(err) {
+			fmt.Printf("directory does not exist\n")
+			continue
+		} else if err != nil {
+			continue
+		}
+
+		if !info.IsDir() {
+			fmt.Println("Given path is not a dir")
+			continue
+		}
+
+		break
 	}
 
 	return outputPath, nil
+}
+
+func promptUintInRange(label string, min, max uint64) uint64 {
+	for {
+		fmt.Printf("Enter %s (%d–%d): ", label, min, max)
+		var input string
+		fmt.Scanln(&input)
+
+		value, err := strconv.ParseUint(strings.TrimSpace(input), 10, 64)
+		if err != nil {
+			fmt.Println("❌ Invalid number. Please enter a valid positive integer.")
+			continue
+		}
+
+		if value < min || value > max {
+			fmt.Printf("❌ Value out of range. Must be between %d and %d.\n", min, max)
+			continue
+		}
+
+		return value
+	}
 }
