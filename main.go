@@ -40,7 +40,7 @@ func main() {
 
 	outPath, err := input.PromptOutputPath()
 	if err != nil {
-		log.Panic("Error taking output path", err)
+		log.Println("Error taking output path", err)
 	}
 
 	if result == "Scale" {
